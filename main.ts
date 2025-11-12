@@ -2,7 +2,6 @@ import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 
 const kv = await Deno.openKv();
 
-// Helper: random short code (6 chars, a-z0-9)
 function generateCode(length = 6) {
   const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
   let code = "";
@@ -12,15 +11,57 @@ function generateCode(length = 6) {
   return code;
 }
 
+// Simple HTML page
+const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Deno ShortLink Generator</title>
+<style>
+body { font-family: sans-serif; max-width: 600px; margin: 50px auto; }
+input { width: 80%; padding: 8px; }
+button { padding: 8px 12px; }
+#result { margin-top: 20px; }
+</style>
+</head>
+<body>
+<h1>Deno ShortLink Generator</h1>
+<input id="url" type="text" placeholder="Enter your URL here"/>
+<button id="generate">Generate</button>
+<div id="result"></div>
+
+<script>
+document.getElementById("generate").onclick = async () => {
+  const url = document.getElementById("url").value;
+  if(!url) return alert("Enter URL");
+
+  const resp = await fetch('/new?url=' + encodeURIComponent(url));
+  const text = await resp.text();
+  const out = document.getElementById("result");
+  out.innerHTML = text + ' <button onclick="copyText()">Copy</button>';
+  window.copyText = () => {
+    navigator.clipboard.writeText(text).then(()=>alert("Copied!"));
+  }
+}
+</script>
+</body>
+</html>
+`;
+
 serve(async (req) => {
   const url = new URL(req.url);
 
-  // ✅ Create new short link (auto code)
+  // Web page
+  if (url.pathname === "/") {
+    return new Response(html, { headers: { "content-type": "text/html" } });
+  }
+
+  // Generate new short link (auto code)
   if (url.pathname === "/new") {
     const long = url.searchParams.get("url");
     if (!long) return new Response("Missing ?url=", { status: 400 });
 
-    // Generate unique code
     let code: string;
     let tries = 0;
     do {
@@ -32,24 +73,10 @@ serve(async (req) => {
 
     await kv.set(["shortlink", code], long);
 
-    return new Response(
-      `✅ Created new short link:\nhttps://${url.host}/${code}`,
-      { headers: { "content-type": "text/plain" } }
-    );
+    return new Response(`https://${url.host}/${code}`, { headers: { "content-type": "text/plain" } });
   }
 
-  // ✅ List all
-  if (url.pathname === "/list") {
-    const list = [];
-    for await (const entry of kv.list({ prefix: ["shortlink"] })) {
-      list.push(`${entry.key[1]} → ${entry.value}`);
-    }
-    return new Response(list.join("\n") || "No links yet.", {
-      headers: { "content-type": "text/plain" },
-    });
-  }
-
-  // ✅ Redirect short link
+  // Redirect short link
   const code = url.pathname.slice(1);
   if (code) {
     const res = await kv.get(["shortlink", code]);
@@ -58,9 +85,5 @@ serve(async (req) => {
     }
   }
 
-  // ✅ Homepage
-  return new Response(
-    "🎯 Deno ShortLink Service is running!\n\nUsage:\n/new?url=https://example.com\n/list - view all links",
-    { headers: { "content-type": "text/plain" } }
-  );
+  return new Response("Not found", { status: 404 });
 });
