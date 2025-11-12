@@ -18,9 +18,9 @@ const html = `
 <meta charset="UTF-8">
 <title>Deno ShortLink Generator</title>
 <style>
-body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; margin: 0; padding: 0; min-height: 100vh; display: flex; justify-content: center; align-items: center; }
-.container { width: 90%; max-width: 600px; background: #fff; padding: 30px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); overflow-y: auto; max-height: 90vh; }
-h1 { text-align: center; font-size: 28px; margin-bottom: 20px; color: #333; }
+html, body { height: 100%; margin: 0; font-family: 'Segoe UI', sans-serif; background: #f0f4f8; display: flex; justify-content: center; align-items: center; }
+.container { width: 90%; max-width: 600px; background: #fff; padding: 30px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center; }
+h1 { font-size: 28px; margin-bottom: 20px; color: #333; }
 .input-group { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 15px; }
 input { flex: 1 1 auto; min-width: 200px; padding: 12px; font-size: 18px; border: 2px solid #ccc; border-radius: 8px; }
 button { padding: 12px 20px; font-size: 18px; background: #4f46e5; color: #fff; border: none; border-radius: 8px; cursor: pointer; }
