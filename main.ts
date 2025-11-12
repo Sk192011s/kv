@@ -2,34 +2,43 @@ import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 
 const kv = await Deno.openKv();
 
+// Helper: random short code (6 chars, a-z0-9)
+function generateCode(length = 6) {
+  const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+  let code = "";
+  for (let i = 0; i < length; i++) {
+    code += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return code;
+}
+
 serve(async (req) => {
   const url = new URL(req.url);
 
-  // ✅ Create new short link: /new?code=abc&url=https://example.com
+  // ✅ Create new short link (auto code)
   if (url.pathname === "/new") {
-    const code = url.searchParams.get("code");
     const long = url.searchParams.get("url");
+    if (!long) return new Response("Missing ?url=", { status: 400 });
 
-    if (!code || !long) {
-      return new Response("Missing ?code= or ?url=", { status: 400 });
-    }
+    // Generate unique code
+    let code: string;
+    let tries = 0;
+    do {
+      code = generateCode(6);
+      const existing = await kv.get(["shortlink", code]);
+      if (!existing.value) break;
+      tries++;
+    } while (tries < 10);
 
-    // Check if code already exists
-    const existing = await kv.get(["shortlink", code]);
-    if (existing.value) {
-      return new Response(`Code already exists: ${code}`, { status: 409 });
-    }
-
-    // Save new link
     await kv.set(["shortlink", code], long);
 
     return new Response(
       `✅ Created new short link:\nhttps://${url.host}/${code}`,
-      { headers: { "content-type": "text/plain" } },
+      { headers: { "content-type": "text/plain" } }
     );
   }
 
-  // ✅ View all links (optional)
+  // ✅ List all
   if (url.pathname === "/list") {
     const list = [];
     for await (const entry of kv.list({ prefix: ["shortlink"] })) {
@@ -49,9 +58,9 @@ serve(async (req) => {
     }
   }
 
-  // ✅ Home info
+  // ✅ Homepage
   return new Response(
-    "🎯 Deno ShortLink Service is running!\n\nUsage:\n/new?code=abc&url=https://example.com\n/list - view all links",
-    { headers: { "content-type": "text/plain" } },
+    "🎯 Deno ShortLink Service is running!\n\nUsage:\n/new?url=https://example.com\n/list - view all links",
+    { headers: { "content-type": "text/plain" } }
   );
 });
